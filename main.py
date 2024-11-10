@@ -41,12 +41,7 @@ def main():
     simplex_solver.prepare_basis()
     print("\nНачало итераций двойственного симплекс-метода для двойственной задачи:")
     simplex_solver.simplex_iteration()
-
-    # Вывод оптимального решения для двойственной задачи
-    print("\nОптимальное решение для двойственной задачи:")
-    deltas = simplex_solver.calc_deltas()
-    print(
-        f"Значение целевой функции двойственной задачи: {deltas[-1]}")  # Последний элемент deltas - значение целевой функции
+    simplex_solver.print_solution()
 
 
 if __name__ == "__main__":

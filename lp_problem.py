@@ -35,20 +35,43 @@ class LPProblem:
         if not self.objective_coefficients or not self.constraint_coefficients:
             raise ValueError("Необходимо полностью задать прямую задачу перед генерацией двойственной.")
 
+        # Приводим все ограничения к одному виду, если смешанные знаки
+        for i in range(self.num_constraints):
+            if self.constraint_signs[i] == '>=':
+                # Умножаем коэффициенты ограничения и правую часть на -1 для приведения к '<='
+                self.constraint_coefficients[i] = [-coef for coef in self.constraint_coefficients[i]]
+                self.right_hand_sides[i] = -self.right_hand_sides[i]
+                self.constraint_signs[i] = '<='  # Меняем знак на '<='
+
         # Двойственная задача имеет m переменных и n ограничений
         dual_problem = LPProblem(self.num_constraints, self.num_variables,
                                  'min' if self.objective_type == 'max' else 'max')
 
-        # Коэффициенты целевой функции двойственной задачи
+        # Коэффициенты целевой функции двойственной задачи (это правые части исходных ограничений)
         dual_problem.set_objective_coefficients(self.right_hand_sides)
 
         # Формирование ограничений для двойственной задачи
-        for j in range(self.num_variables):
+        for j in range(self.num_variables):  # Перебираем каждую переменную в прямой задаче
             constraint = []
-            for i in range(self.num_constraints):
+            for i in range(self.num_constraints):  # Перебираем каждое ограничение в прямой задаче
+                # Строим коэффициенты для ограничения в двойственной задаче из столбцов исходных коэффициентов
                 constraint.append(self.constraint_coefficients[i][j])
-            sign = '>=' if self.objective_type == 'max' else '<='
-            dual_problem.add_constraint(" ".join(map(str, constraint)) + f" {sign} {self.objective_coefficients[j]}")
+
+            # Знак в ограничении двойственной задачи зависит от знака исходного ограничения
+            if self.constraint_signs[i] == '<=':
+                dual_sign = '>='  # Если в прямой задаче знак <=, то в двойственной будет >=
+            elif self.constraint_signs[i] == '>=':
+                dual_sign = '<='  # Если в прямой задаче знак >=, то в двойственной будет <=
+            else:
+                raise ValueError(f"Неизвестный знак ограничения: {self.constraint_signs[i]}")
+
+            # Добавление ограничения в двойственную задачу
+            dual_problem.add_constraint(
+                " ".join(map(str, constraint)) + f" {dual_sign} {self.objective_coefficients[j]}")
+
+        # Перезаписываем число переменных и ограничений
+        dual_problem.num_variables = self.num_constraints
+        dual_problem.num_constraints = self.num_variables
 
         return dual_problem
 
